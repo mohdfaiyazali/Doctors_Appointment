@@ -9,6 +9,8 @@ from .decorators import doctor_required
 from django.utils.timezone import now
 from .models import Review
 from .forms import ReviewForm
+from django.db import transaction, IntegrityError
+
 
 User = get_user_model()
 
@@ -113,6 +115,7 @@ def generate_time_slots():
 
     return slots
 
+
 @login_required
 def book_appointment(request, doctor_id):
     doctor_profile = get_object_or_404(DoctorProfile, id=doctor_id)
@@ -125,6 +128,8 @@ def book_appointment(request, doctor_id):
 
     # ✅ Convert selected_date to proper date object
     selected_date_obj = None
+
+    # ✅ Handle GET (for showing booked slots)
     if selected_date:
         try:
             selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d").date()
@@ -135,52 +140,50 @@ def book_appointment(request, doctor_id):
                     date=selected_date_obj
                 ).values_list('time', flat=True)
             )
+
         except ValueError:
             selected_date_obj = None
 
     # ✅ Handle POST (Booking)
-        if request.method == 'POST':
-            date_str = request.POST.get('date')
-            time_str = request.POST.get('time')
+    if request.method == 'POST':
+        date_str = request.POST.get('date')
+        time_str = request.POST.get('time')
 
-            try:
-                selected_date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-                selected_time_obj = datetime.strptime(time_str, "%H:%M").time()
-            except (ValueError, TypeError):
-                messages.error(request, "Invalid date or time format")
-                return redirect(request.path)
+        try:
+            selected_date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            selected_time_obj = datetime.strptime(time_str, "%H:%M").time()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date or time format")
+            return redirect(request.path)
 
-            # ❌ Past date check
-            if selected_date_obj < date.today():
-                messages.error(request, "Cannot book past dates")
+        # ❌ Past date check
+        if selected_date_obj < date.today():
+            messages.error(request, "Cannot book past dates")
+            return redirect(request.path + f"?date={date_str}")
+
+        # ❌ Past time check
+        if selected_date_obj == date.today():
+            current_time = datetime.now().time()
+            if selected_time_obj < current_time:
+                messages.error(request, "Cannot book past time")
                 return redirect(request.path + f"?date={date_str}")
 
-            # ❌ Past time check (for today)
-            if selected_date_obj == date.today():
-                current_time = datetime.now().time()
-                if selected_time_obj < current_time:
-                    messages.error(request, "Cannot book past time")
-                    return redirect(request.path + f"?date={date_str}")
-
-            # ❌ Double booking check
-            if Appointment.objects.filter(
-                doctor=doctor,
-                date=selected_date_obj,
-                time=selected_time_obj
-            ).exists():
-                messages.error(request, "This slot is already booked")
-                return redirect(request.path + f"?date={date_str}")
-
-            # ✅ Create appointment
-            Appointment.objects.create(
-                patient=request.user,
-                doctor=doctor,
-                date=selected_date_obj,
-                time=selected_time_obj
-            )
+        # ✅ Concurrency-safe booking
+        try:
+            with transaction.atomic():
+                Appointment.objects.create(
+                    patient=request.user,
+                    doctor=doctor,
+                    date=selected_date_obj,
+                    time=selected_time_obj
+                )
 
             messages.success(request, "Appointment booked successfully!")
             return redirect('doctor_list')
+
+        except IntegrityError:
+            messages.error(request, "⚠️ This slot was just booked by someone else. Try another time.")
+            return redirect(request.path + f"?date={date_str}")
 
     return render(request, 'appointments/book_appointment.html', {
         'doctor': doctor,

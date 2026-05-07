@@ -19,6 +19,14 @@ class Appointment(models.Model):
     def __str__(self):
         return f"{self.patient} - {self.doctor} on {self.date}"
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doctor', 'date', 'time'],
+                name='unique_doctor_slot'
+            )
+        ]
+
 
 class Review(models.Model):
     appointment = models.OneToOneField('Appointment', on_delete=models.CASCADE)
