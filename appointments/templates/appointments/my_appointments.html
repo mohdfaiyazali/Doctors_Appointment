@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}My Appointments{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">My Appointments</h2>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for appointment in appointments %}
+            <tr>
+                <td>{{ appointment.doctor.username }}</td>
+                <td>{{ appointment.date }}</td>
+                <td>{{ appointment.time|time:"H:i" }}</td>
+
+                <td>
+                    {% if appointment.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% elif appointment.status == 'confirmed' %}
+                    <span class="badge bg-success">Confirmed</span>
+                    {% elif appointment.status == 'cancelled' %}
+                    <span class="badge bg-danger">Cancelled</span>
+                    {% elif appointment.status == 'completed' %}
+                    <span class="badge bg-primary">Completed</span>
+                    {% endif %}
+                </td>
+
+                <td>
+
+                    {% if appointment.status != 'cancelled' and appointment.status != 'completed' %}
+                    <!-- Cancel button -->
+                    <a href="{% url 'cancel_appointment' appointment.id %}"
+                       class="btn btn-danger btn-sm">
+                        Cancel
+                    </a>
+                    {% endif %}
+
+                    {% if appointment.status == 'completed' %}
+                    <!-- Review button -->
+                    <a href="{% url 'add_review' appointment.id %}"
+                       class="btn btn-warning btn-sm">
+                        Review
+                    </a>
+                    {% endif %}
+
+                    {% if appointment.status == 'cancelled' %}
+                    <span class="text-muted">N/A</span>
+                    {% endif %}
+
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">No appointments found</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

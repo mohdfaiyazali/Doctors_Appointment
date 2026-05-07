@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctors{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    {% if upcoming_appointment %}
+    <div class="alert alert-warning d-flex justify-content-between align-items-center shadow-sm">
+
+        <div>
+            🔔 You have an appointment today with
+            <strong>{{ upcoming_appointment.doctor.username }}</strong>
+            at <strong>{{ upcoming_appointment.time|time:"H:i" }}</strong>
+        </div>
+
+        <a href="{% url 'my_appointments' %}" class="btn btn-dark btn-sm">
+            View
+        </a>
+
+    </div>
+    {% endif %}
+
+
+    <h2 class="mb-4">Available Doctors</h2>
+
+    <!-- 🔍 Search + Filter -->
+    <form method="GET" class="row g-3 mb-4">
+
+        <!-- Search by name -->
+        <div class="col-12 col-md-4">
+            <input type="text" name="q" class="form-control"
+                   placeholder="Search by doctor name"
+                   value="{{ request.GET.q }}">
+        </div>
+
+        <!-- Specialization filter -->
+        <div class="col-12 col-md-4">
+            <select name="specialization" class="form-control">
+                <option value="">All Specializations</option>
+                {% for spec in specializations %}
+                    <option value="{{ spec }}"
+                        {% if request.GET.specialization == spec %}selected{% endif %}>
+                        {{ spec }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Min Experience -->
+        <div class="col-12 col-md-2">
+            <input type="number" name="min_exp" class="form-control"
+                   placeholder="Min Exp"
+                   value="{{ request.GET.min_exp }}">
+        </div>
+
+        <!-- Search button -->
+        <div class="col-12 col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+                Search
+            </button>
+            <a href="{% url 'doctor_list' %}" class="btn btn-secondary w-100">
+                Reset
+            </a>
+        </div>
+
+    </form>
+
+    <!-- 👨‍⚕️ Doctor Cards -->
+    <div class="row">
+        {% for doctor in doctors %}
+        <div class="col-12 col-sm-6 col-md-4">
+            <div class="card shadow-sm border-0 h-100 doctor-card">
+
+                <div class="card-body d-flex flex-column">
+
+                    <!-- 👤 Avatar -->
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto"
+                             style="width: 70px; height: 70px; font-size: 24px;">
+                            {{ doctor.user.username|first|upper }}
+                        </div>
+                    </div>
+
+                    <!-- 🧑‍⚕️ Name -->
+                    <h5 class="text-center mb-1">
+                        Dr. {{ doctor.user.username }}
+                    </h5>
+
+                    <!-- ⭐ Rating -->
+                    {% if doctor.avg_rating %}
+                        <p class="text-center small text-muted mb-2">
+                            ⭐ {{ doctor.avg_rating|floatformat:1 }} / 5
+                            ({{ doctor.total_reviews }} reviews)
+                        </p>
+                    {% else %}
+                        <p class="text-center small text-muted mb-2">
+                            No ratings yet
+                        </p>
+                    {% endif %}
+
+                    <!-- 📌 Details -->
+                    <p class="mb-1 text-center">
+                        <strong>{{ doctor.specialization }}</strong>
+                    </p>
+
+                    <p class="text-muted text-center mb-3">
+                        {{ doctor.experience }} years experience
+                    </p>
+
+                    <!-- 🔘 Button -->
+                    <a href="{% url 'book_appointment' doctor.id %}"
+                       class="btn btn-primary mt-auto w-100">
+                        Book Appointment
+                    </a>
+
+                </div>
+            </div>
+        </div>
+
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                No doctors found
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

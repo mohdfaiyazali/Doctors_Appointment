@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">Doctor Dashboard</h2>
+
+    <div class="row mb-4">
+
+        <div class="col-6 col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body text-center">
+                    <h5>Total</h5>
+                    <h3>{{ total_appointments }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body text-center">
+                    <h5>Today</h5>
+                    <h3>{{ today_appointments }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-dark bg-warning mb-3">
+                <div class="card-body text-center">
+                    <h5>Pending</h5>
+                    <h3>{{ pending_count }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body text-center">
+                    <h5>Confirmed</h5>
+                    <h3>{{ confirmed_count }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-white bg-secondary mb-3">
+                <div class="card-body text-center">
+                    <h5>Completed</h5>
+                    <h3>{{ completed_count }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-body text-center">
+                    <h5>Cancelled</h5>
+                    <h3>{{ cancelled_count }}</h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Patient</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        {% for appointment in appointments %}
+        <tr>
+            <td>{{ appointment.patient.username }}</td>
+            <td>{{ appointment.date }}</td>
+            <td>{{ appointment.time|time:"H:i" }}</td>
+
+            <td>
+                {% if appointment.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                {% elif appointment.status == 'confirmed' %}
+                    <span class="badge bg-success">Confirmed</span>
+                {% elif appointment.status == 'cancelled' %}
+                    <span class="badge bg-danger">Cancelled</span>
+                {% elif appointment.status == 'completed' %}
+                    <span class="badge bg-primary">Completed</span>
+                {% endif %}
+            </td>
+
+            <td>
+                {% if appointment.status == 'pending' %}
+                    <a href="{% url 'update_status' appointment.id 'confirmed' %}" class="btn btn-success btn-sm">Approve</a>
+                    <a href="{% url 'update_status' appointment.id 'cancelled' %}" class="btn btn-danger btn-sm">Reject</a>
+                {% elif appointment.status == 'confirmed' %}
+                    <a href="{% url 'update_status' appointment.id 'completed' %}" class="btn btn-primary btn-sm">Mark Completed</a>
+                {% else %}
+                    <span class="text-muted">No action</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center">No appointments found</td>
+        </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Book Appointment{% endblock %}
+
+{% block content %}
+
+<style>
+    .slot-btn.active {
+        background-color: #198754 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="container mt-5">
+
+    <h3 class="mb-4">Book Appointment with {{ doctor.username }}</h3>
+
+    <!-- 🔍 Select Date -->
+    <form method="GET" class="mb-4">
+        <label class="form-label">Select Date:</label>
+        <input type="date" name="date" class="form-control" required>
+        <button type="submit" class="btn btn-primary mt-2">
+            Check Availability
+        </button>
+    </form>
+
+    {% if selected_date %}
+
+        <!-- 📅 Selected Date -->
+        <div class="alert alert-info">
+            Selected Date: <strong>{{ selected_date }}</strong>
+        </div>
+
+        <!-- ⛔ Booked Slots -->
+        <h5>Booked Slots</h5>
+        <ul class="list-group mb-4">
+            {% for slot in booked_slots %}
+                <li class="list-group-item list-group-item-danger">
+                    {{ slot|time:"H:i" }}
+                </li>
+            {% empty %}
+                <li class="list-group-item list-group-item-success">
+                    No slots booked yet
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- 🎯 Time Slots -->
+        <h5>Select Time Slot</h5>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            <input type="hidden" name="time" id="selected_time">
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% for slot in all_slots %}
+                    {% if slot in booked_slots %}
+                        <button type="button" class="btn btn-danger" disabled>
+                            {{ slot|time:"H:i" }}
+                        </button>
+                    {% else %}
+                        <button type="button"
+                                class="btn btn-outline-success slot-btn"
+                                onclick="selectTime('{{ slot|time:'H:i' }}', this)">
+                            {{ slot|time:"H:i" }}
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Confirm Booking
+            </button>
+        </form>
+
+    {% endif %}
+
+</div>
+
+<script>
+function selectTime(time, element) {
+    document.getElementById('selected_time').value = time;
+
+    document.querySelectorAll('.slot-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    element.classList.add('active');
+}
+</script>
+
+{% endblock %}
