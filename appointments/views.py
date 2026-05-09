@@ -10,7 +10,9 @@ from django.utils.timezone import now
 from .models import Review
 from .forms import ReviewForm
 from django.db import transaction, IntegrityError
-
+from django.core.mail import send_mail
+from django.conf import settings
+from django.db import transaction, IntegrityError
 
 User = get_user_model()
 
@@ -178,11 +180,36 @@ def book_appointment(request, doctor_id):
                     time=selected_time_obj
                 )
 
+            # ✅ Send emails AFTER saving
+            try:
+                # Patient email
+                if request.user.email:
+                    send_mail(
+                        subject='Appointment Confirmed',
+                        message=f'Your appointment with Dr. {doctor.username} is confirmed on {selected_date_obj} at {selected_time_obj}.',
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[request.user.email],
+                        fail_silently=True,
+                    )
+
+                # Doctor email
+                if doctor.email:
+                    send_mail(
+                        subject='New Appointment Booked',
+                        message=f'New appointment booked by {request.user.username} on {selected_date_obj} at {selected_time_obj}.',
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[doctor.email],
+                        fail_silently=True,
+                    )
+
+            except Exception as e:
+                print("Email sending failed:", e)
+
             messages.success(request, "Appointment booked successfully!")
             return redirect('doctor_list')
 
         except IntegrityError:
-            messages.error(request, "⚠️ This slot was just booked by someone else. Try another time.")
+            messages.error(request, "⚠️ This slot was just booked by someone else.")
             return redirect(request.path + f"?date={date_str}")
 
     return render(request, 'appointments/book_appointment.html', {
