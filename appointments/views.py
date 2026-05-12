@@ -13,6 +13,8 @@ from django.db import transaction, IntegrityError
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction, IntegrityError
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 
 User = get_user_model()
 
@@ -202,9 +204,29 @@ def book_appointment(request, doctor_id):
                         fail_silently=True,
                     )
 
+                # ✅ HTML email (optional enhancement)
+                if request.user.email:
+                    html_content = render_to_string('emails/appointment_confirm.html', {
+                        'user': request.user,
+                        'doctor': doctor,
+                        'date': selected_date_obj,
+                        'time': selected_time_obj,
+                    })
+
+                    email = EmailMultiAlternatives(
+                        subject='Appointment Confirmed',
+                        body='Your appointment is confirmed.',
+                        from_email=settings.EMAIL_HOST_USER,
+                        to=[request.user.email],
+                    )
+
+                    email.attach_alternative(html_content, "text/html")
+                    email.send()
+
             except Exception as e:
                 print("Email sending failed:", e)
 
+            # ✅ Success message AFTER everything
             messages.success(request, "Appointment booked successfully!")
             return redirect('doctor_list')
 

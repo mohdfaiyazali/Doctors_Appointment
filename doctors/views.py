@@ -4,6 +4,7 @@ from django.db.models import Avg, Count
 from django.utils.timezone import now
 from appointments.models import Appointment
 
+
 def doctor_list(request):
     doctors = DoctorProfile.objects.all()
 
