@@ -1,6 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.db.models import Avg, Count
 from .forms import RegisterForm
+from appointments.models import Appointment
 
 def register_view(request):
     form = RegisterForm()
@@ -32,3 +35,29 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+@login_required
+def profile_view(request):
+    if request.user.role == 'doctor':
+        appointments = Appointment.objects.filter(doctor=request.user)
+    else:
+        appointments = Appointment.objects.filter(patient=request.user)
+
+    context = {
+        'total_appointments': appointments.count(),
+        'pending_count': appointments.filter(status='pending').count(),
+        'confirmed_count': appointments.filter(status='confirmed').count(),
+        'completed_count': appointments.filter(status='completed').count(),
+        'cancelled_count': appointments.filter(status='cancelled').count(),
+        'recent_appointments': appointments.order_by('-date', '-time')[:5],
+    }
+
+    if request.user.role == 'doctor':
+        context['doctor_profile'] = getattr(request.user, 'doctorprofile', None)
+        context.update(request.user.doctor_reviews.aggregate(
+            avg_rating=Avg('rating'),
+            total_reviews=Count('id')
+        ))
+
+    return render(request, 'users/profile.html', context)

@@ -110,6 +110,11 @@
                     </p>
 
                     <!-- 🔘 Button -->
+                    <a href="{% url 'doctor_profile' doctor.id %}"
+                       class="btn btn-outline-secondary mb-2 w-100">
+                        View Profile
+                    </a>
+
                     <a href="{% url 'book_appointment' doctor.id %}"
                        class="btn btn-primary mt-auto w-100">
                         Book Appointment

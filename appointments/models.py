@@ -15,6 +15,10 @@ class Appointment(models.Model):
     date = models.DateField()
     time = models.TimeField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    diagnosis_summary = models.TextField(blank=True)
+    prescription_text = models.TextField(blank=True)
+    patient_notes = models.TextField(blank=True, help_text="Visible to patient")
+    doctor_private_notes = models.TextField(blank=True, help_text="Visible only to doctor")
 
     def __str__(self):
         return f"{self.patient} - {self.doctor} on {self.date}"

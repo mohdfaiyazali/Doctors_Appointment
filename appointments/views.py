@@ -8,13 +8,14 @@ from datetime import datetime, time, date
 from .decorators import doctor_required
 from django.utils.timezone import now
 from .models import Review
-from .forms import ReviewForm
+from .forms import ReviewForm, AppointmentMedicalNotesForm
 from django.db import transaction, IntegrityError
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -52,8 +53,8 @@ def add_review(request, appointment_id):
 @login_required
 def doctor_dashboard(request):
     doctor = request.user
-
-    appointments = Appointment.objects.filter(doctor=doctor)
+    today = now().date()
+    appointments = Appointment.objects.filter(doctor=doctor).order_by('-date', '-time')
 
     # 📊 Stats
     total_appointments = appointments.count()
@@ -65,8 +66,15 @@ def doctor_dashboard(request):
     completed_count = appointments.filter(status='completed').count()
     cancelled_count = appointments.filter(status='cancelled').count()
 
+    today_schedule = appointments.filter(date=today).order_by('time')
+    pending_appointments = appointments.filter(status='pending').order_by('date', 'time')
+    recent_reviews = Review.objects.filter(doctor=doctor).order_by('-created_at')[:5]
+
     return render(request, 'appointments/doctor_dashboard.html', {
         'appointments': appointments,
+        'today_schedule': today_schedule,
+        'pending_appointments': pending_appointments,
+        'recent_reviews': recent_reviews,
         'total_appointments': total_appointments,
         'today_appointments': today_appointments,
         'pending_count': pending_count,
@@ -93,9 +101,17 @@ def update_status(request, appointment_id, status):
 
 @login_required
 def my_appointments(request):
-    appointments = Appointment.objects.filter(patient=request.user).order_by('-date', '-time')
+    today = now().date()
+    appointments = Appointment.objects.filter(patient=request.user).order_by('date', 'time')
+    upcoming_appointments = appointments.filter(Q(date__gt=today) | Q(date=today, status__in=['pending', 'confirmed']))
+    past_appointments = appointments.filter(Q(date__lt=today) | Q(status='completed')).exclude(status='cancelled')
+    cancelled_appointments = appointments.filter(status='cancelled')
+
     return render(request, 'appointments/my_appointments.html', {
-        'appointments': appointments
+        'appointments': appointments,
+        'upcoming_appointments': upcoming_appointments,
+        'past_appointments': past_appointments,
+        'cancelled_appointments': cancelled_appointments,
     })
 
 
@@ -105,6 +121,26 @@ def cancel_appointment(request, appointment_id):
     appointment.status = 'cancelled'
     appointment.save()
     return redirect('my_appointments')
+
+
+@login_required
+@doctor_required
+def edit_medical_notes(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=request.user)
+
+    if request.method == 'POST':
+        form = AppointmentMedicalNotesForm(request.POST, instance=appointment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Medical notes updated.")
+            return redirect('doctor_dashboard')
+    else:
+        form = AppointmentMedicalNotesForm(instance=appointment)
+
+    return render(request, 'appointments/edit_medical_notes.html', {
+        'appointment': appointment,
+        'form': form,
+    })
 
 
 

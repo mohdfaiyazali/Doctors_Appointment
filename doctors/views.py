@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from .models import DoctorProfile
 from django.db.models import Avg, Count
 from django.utils.timezone import now
@@ -50,4 +50,26 @@ def doctor_list(request):
         'doctors': doctors,
         'specializations': specializations,
         'upcoming_appointment': upcoming_appointment
+    })
+
+
+def doctor_profile(request, doctor_id):
+    doctor = get_object_or_404(
+        DoctorProfile.objects.annotate(
+            avg_rating=Avg('user__doctor_reviews__rating'),
+            total_reviews=Count('user__doctor_reviews', distinct=True)
+        ),
+        id=doctor_id
+    )
+
+    reviews = doctor.user.doctor_reviews.select_related('patient').order_by('-created_at')
+    completed_appointments = Appointment.objects.filter(
+        doctor=doctor.user,
+        status='completed'
+    ).count()
+
+    return render(request, 'doctors/doctor_profile.html', {
+        'doctor': doctor,
+        'reviews': reviews,
+        'completed_appointments': completed_appointments,
     })

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3"
+                         style="width: 90px; height: 90px; font-size: 34px;">
+                        {{ request.user.username|first|upper }}
+                    </div>
+
+                    <h3 class="mb-1">{{ request.user.username }}</h3>
+                    <p class="text-muted text-capitalize mb-3">{{ request.user.role }}</p>
+
+                    {% if request.user.email %}
+                        <p class="mb-1">{{ request.user.email }}</p>
+                    {% else %}
+                        <p class="text-muted mb-1">No email added</p>
+                    {% endif %}
+
+                    <p class="text-muted small mb-0">
+                        Joined {{ request.user.date_joined|date:"M d, Y" }}
+                    </p>
+                </div>
+            </div>
+
+            {% if request.user.role == 'doctor' %}
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Doctor Details</h5>
+
+                    {% if doctor_profile %}
+                        <p class="mb-1">
+                            <strong>Specialization:</strong> {{ doctor_profile.specialization }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Experience:</strong> {{ doctor_profile.experience }} years
+                        </p>
+                        <p class="mb-0">
+                            <strong>Rating:</strong>
+                            {% if avg_rating %}
+                                {{ avg_rating|floatformat:1 }} / 5 ({{ total_reviews }} reviews)
+                            {% else %}
+                                No ratings yet
+                            {% endif %}
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-0">No doctor profile has been created yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Total</p>
+                            <h4 class="mb-0">{{ total_appointments }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Pending</p>
+                            <h4 class="mb-0">{{ pending_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Confirmed</p>
+                            <h4 class="mb-0">{{ confirmed_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Completed</p>
+                            <h4 class="mb-0">{{ completed_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Recent Appointments</h4>
+                        {% if request.user.role == 'doctor' %}
+                            <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-primary btn-sm">
+                                Dashboard
+                            </a>
+                        {% else %}
+                            <a href="{% url 'my_appointments' %}" class="btn btn-outline-primary btn-sm">
+                                View All
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>{% if request.user.role == 'doctor' %}Patient{% else %}Doctor{% endif %}</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in recent_appointments %}
+                                <tr>
+                                    <td>
+                                        {% if request.user.role == 'doctor' %}
+                                            {{ appointment.patient.username }}
+                                        {% else %}
+                                            {{ appointment.doctor.username }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ appointment.date }}</td>
+                                    <td>{{ appointment.time|time:"H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary text-capitalize">
+                                            {{ appointment.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No appointments found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

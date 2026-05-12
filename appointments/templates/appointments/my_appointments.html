@@ -3,12 +3,11 @@
 {% block title %}My Appointments{% endblock %}
 
 {% block content %}
-
 <div class="container mt-5">
+    <h2 class="mb-4">Patient Dashboard</h2>
 
-    <h2 class="mb-4">My Appointments</h2>
-
-    <table class="table table-bordered table-striped">
+    <h4>Upcoming Appointments</h4>
+    <table class="table table-bordered table-striped mb-4">
         <thead class="table-dark">
             <tr>
                 <th>Doctor</th>
@@ -19,58 +18,86 @@
             </tr>
         </thead>
         <tbody>
-
-            {% for appointment in appointments %}
+            {% for appointment in upcoming_appointments %}
             <tr>
                 <td>{{ appointment.doctor.username }}</td>
                 <td>{{ appointment.date }}</td>
                 <td>{{ appointment.time|time:"H:i" }}</td>
-
+                <td><span class="badge bg-{% if appointment.status == 'pending' %}warning text-dark{% else %}success{% endif %}">{{ appointment.get_status_display }}</span></td>
                 <td>
-                    {% if appointment.status == 'pending' %}
-                    <span class="badge bg-warning text-dark">Pending</span>
-                    {% elif appointment.status == 'confirmed' %}
-                    <span class="badge bg-success">Confirmed</span>
-                    {% elif appointment.status == 'cancelled' %}
-                    <span class="badge bg-danger">Cancelled</span>
-                    {% elif appointment.status == 'completed' %}
-                    <span class="badge bg-primary">Completed</span>
-                    {% endif %}
-                </td>
-
-                <td>
-
                     {% if appointment.status != 'cancelled' and appointment.status != 'completed' %}
-                    <!-- Cancel button -->
-                    <a href="{% url 'cancel_appointment' appointment.id %}"
-                       class="btn btn-danger btn-sm">
-                        Cancel
-                    </a>
+                    <a href="{% url 'cancel_appointment' appointment.id %}" class="btn btn-danger btn-sm">Cancel</a>
                     {% endif %}
-
-                    {% if appointment.status == 'completed' %}
-                    <!-- Review button -->
-                    <a href="{% url 'add_review' appointment.id %}"
-                       class="btn btn-warning btn-sm">
-                        Review
-                    </a>
-                    {% endif %}
-
-                    {% if appointment.status == 'cancelled' %}
-                    <span class="text-muted">N/A</span>
-                    {% endif %}
-
                 </td>
             </tr>
             {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">No appointments found</td>
-            </tr>
+            <tr><td colspan="5" class="text-center">No upcoming appointments</td></tr>
             {% endfor %}
-
         </tbody>
     </table>
 
-</div>
+    <h4>Past Appointments</h4>
+    <table class="table table-bordered table-striped mb-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Medical Summary</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for appointment in past_appointments %}
+            <tr>
+                <td>{{ appointment.doctor.username }}</td>
+                <td>{{ appointment.date }}</td>
+                <td>{{ appointment.time|time:"H:i" }}</td>
+                <td><span class="badge bg-primary">{{ appointment.get_status_display }}</span></td>
+                <td>
+                    {% if appointment.diagnosis_summary %}<div><strong>Diagnosis:</strong> {{ appointment.diagnosis_summary }}</div>{% endif %}
+                    {% if appointment.prescription_text %}<div><strong>Prescription:</strong> {{ appointment.prescription_text }}</div>{% endif %}
+                    {% if appointment.patient_notes %}<div><strong>Notes:</strong> {{ appointment.patient_notes }}</div>{% endif %}
+                    {% if not appointment.diagnosis_summary and not appointment.prescription_text and not appointment.patient_notes %}
+                    <span class="text-muted">No notes shared</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'book_appointment' appointment.doctor.doctorprofile.id %}" class="btn btn-outline-primary btn-sm">Quick Rebook</a>
+                    {% if appointment.status == 'completed' %}
+                    <a href="{% url 'add_review' appointment.id %}" class="btn btn-warning btn-sm">Review</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">No past appointments</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
+    <h4>Cancelled Appointments</h4>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for appointment in cancelled_appointments %}
+            <tr>
+                <td>{{ appointment.doctor.username }}</td>
+                <td>{{ appointment.date }}</td>
+                <td>{{ appointment.time|time:"H:i" }}</td>
+                <td><a href="{% url 'book_appointment' appointment.doctor.doctorprofile.id %}" class="btn btn-outline-primary btn-sm">Quick Rebook</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center">No cancelled appointments</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

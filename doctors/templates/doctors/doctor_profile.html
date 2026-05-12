@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Dr. {{ doctor.user.username }}{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mx-auto mb-3"
+                         style="width: 96px; height: 96px; font-size: 36px;">
+                        {{ doctor.user.username|first|upper }}
+                    </div>
+
+                    <h2 class="mb-1">Dr. {{ doctor.user.username }}</h2>
+                    <p class="text-muted mb-3">{{ doctor.specialization }}</p>
+
+                    {% if doctor.avg_rating %}
+                        <p class="mb-1">
+                            <strong>{{ doctor.avg_rating|floatformat:1 }} / 5</strong>
+                            from {{ doctor.total_reviews }} reviews
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-1">No ratings yet</p>
+                    {% endif %}
+
+                    <p class="mb-3">{{ doctor.experience }} years experience</p>
+
+                    <a href="{% url 'book_appointment' doctor.id %}" class="btn btn-primary w-100">
+                        Book Appointment
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Completed Appointments</p>
+                            <h4 class="mb-0">{{ completed_appointments }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-1">Reviews</p>
+                            <h4 class="mb-0">{{ doctor.total_reviews }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4 class="mb-3">Patient Reviews</h4>
+
+                    {% for review in reviews %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between gap-3">
+                            <strong>{{ review.patient.username }}</strong>
+                            <span class="badge bg-warning text-dark">{{ review.rating }} / 5</span>
+                        </div>
+                        {% if review.comment %}
+                            <p class="mb-1 mt-2">{{ review.comment }}</p>
+                        {% endif %}
+                        <p class="text-muted small mb-0">{{ review.created_at|date:"M d, Y" }}</p>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">No reviews yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
