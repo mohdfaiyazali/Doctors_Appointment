@@ -5,6 +5,7 @@ from django.utils.timezone import now
 
 from users.models import User
 from doctors.models import DoctorProfile
+from doctors.models import DoctorAvailability, DoctorBlockedDate
 from appointments.models import Appointment
 
 
@@ -131,3 +132,105 @@ class AppointmentFeatureTests(TestCase):
         self.client.login(username='doctor1', password='pass12345')
         response = self.client.get(reverse('edit_medical_notes', args=[other_appointment.id]))
         self.assertEqual(response.status_code, 404)
+
+    def test_booking_get_shows_only_available_slots_for_day(self):
+        monday = now().date()
+        while monday.weekday() != 0:
+            monday += timedelta(days=1)
+        DoctorAvailability.objects.create(
+            doctor=self.doctor,
+            day_of_week=0,
+            start_time='10:00',
+            end_time='11:00',
+        )
+        self.client.login(username='patient1', password='pass12345')
+        response = self.client.get(reverse('book_appointment', args=[self.doctor_profile.id]), {'date': monday.isoformat()})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '10:00')
+        self.assertContains(response, '10:30')
+        self.assertNotContains(response, '11:00')
+
+    def test_booking_post_rejects_time_outside_availability(self):
+        monday = now().date()
+        while monday.weekday() != 0:
+            monday += timedelta(days=1)
+        DoctorAvailability.objects.create(
+            doctor=self.doctor,
+            day_of_week=0,
+            start_time='10:00',
+            end_time='11:00',
+        )
+        self.client.login(username='patient1', password='pass12345')
+        response = self.client.post(
+            reverse('book_appointment', args=[self.doctor_profile.id]),
+            data={'date': monday.isoformat(), 'time': '12:00'},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "outside doctor")
+        self.assertFalse(
+            Appointment.objects.filter(
+                patient=self.patient,
+                doctor=self.doctor,
+                date=monday,
+                time='12:00'
+            ).exists()
+        )
+
+    def test_booking_post_rejects_blocked_date(self):
+        monday = now().date()
+        while monday.weekday() != 0:
+            monday += timedelta(days=1)
+        DoctorAvailability.objects.create(
+            doctor=self.doctor,
+            day_of_week=0,
+            start_time='10:00',
+            end_time='11:00',
+        )
+        DoctorBlockedDate.objects.create(
+            doctor=self.doctor,
+            date=monday,
+            reason='Holiday'
+        )
+        self.client.login(username='patient1', password='pass12345')
+        response = self.client.post(
+            reverse('book_appointment', args=[self.doctor_profile.id]),
+            data={'date': monday.isoformat(), 'time': '10:00'},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "outside doctor")
+        self.assertFalse(
+            Appointment.objects.filter(
+                patient=self.patient,
+                doctor=self.doctor,
+                date=monday,
+                time='10:00'
+            ).exists()
+        )
+
+    def test_booking_post_allows_time_within_availability(self):
+        monday = now().date()
+        while monday.weekday() != 0:
+            monday += timedelta(days=1)
+        DoctorAvailability.objects.create(
+            doctor=self.doctor,
+            day_of_week=0,
+            start_time='10:00',
+            end_time='11:00',
+        )
+        self.client.login(username='patient1', password='pass12345')
+        response = self.client.post(
+            reverse('book_appointment', args=[self.doctor_profile.id]),
+            data={'date': monday.isoformat(), 'time': '10:00'},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            Appointment.objects.filter(
+                patient=self.patient,
+                doctor=self.doctor,
+                date=monday,
+                time='10:00'
+            ).exists()
+        )

@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Appointment
 from doctors.models import DoctorProfile
+from doctors.models import DoctorAvailability, DoctorBlockedDate
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from datetime import datetime, time, date
+from datetime import datetime, time, date, timedelta
 from .decorators import doctor_required
 from django.utils.timezone import now
 from .models import Review
@@ -156,6 +157,27 @@ def generate_time_slots():
     return slots
 
 
+def get_available_slots_for_date(doctor, selected_date_obj):
+    if DoctorBlockedDate.objects.filter(doctor=doctor, date=selected_date_obj).exists():
+        return []
+
+    weekday = selected_date_obj.weekday()
+    windows = DoctorAvailability.objects.filter(doctor=doctor, day_of_week=weekday).order_by('start_time')
+    if not windows.exists():
+        return []
+
+    all_slots = []
+    for window in windows:
+        current_dt = datetime.combine(selected_date_obj, window.start_time)
+        end_dt = datetime.combine(selected_date_obj, window.end_time)
+        while current_dt < end_dt:
+            all_slots.append(current_dt.time().replace(second=0, microsecond=0))
+            current_dt += timedelta(minutes=30)
+
+    unique_sorted_slots = sorted(set(all_slots))
+    return unique_sorted_slots
+
+
 @login_required
 def book_appointment(request, doctor_id):
     doctor_profile = get_object_or_404(DoctorProfile, id=doctor_id)
@@ -180,6 +202,7 @@ def book_appointment(request, doctor_id):
                     date=selected_date_obj
                 ).values_list('time', flat=True)
             )
+            all_slots = get_available_slots_for_date(doctor, selected_date_obj)
 
         except ValueError:
             selected_date_obj = None
@@ -207,6 +230,11 @@ def book_appointment(request, doctor_id):
             if selected_time_obj < current_time:
                 messages.error(request, "Cannot book past time")
                 return redirect(request.path + f"?date={date_str}")
+
+        allowed_slots = get_available_slots_for_date(doctor, selected_date_obj)
+        if selected_time_obj not in allowed_slots:
+            messages.error(request, "Selected time is outside doctor's availability or blocked.")
+            return redirect(request.path + f"?date={date_str}")
 
         # ✅ Concurrency-safe booking
         try:

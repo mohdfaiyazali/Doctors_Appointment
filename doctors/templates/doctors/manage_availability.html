@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Availability{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Manage Availability</h2>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5>Add Weekly Slot</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_slot">
+                    {{ availability_form.as_p }}
+                    <button type="submit" class="btn btn-primary">Add Slot</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5>Block Leave/Holiday Date</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_blocked_date">
+                    {{ blocked_form.as_p }}
+                    <button type="submit" class="btn btn-warning">Block Date</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <h5>Weekly Slots</h5>
+            <table class="table table-bordered">
+                <thead><tr><th>Day</th><th>Start</th><th>End</th><th></th></tr></thead>
+                <tbody>
+                {% for slot in slots %}
+                    <tr>
+                        <td>{{ slot.get_day_of_week_display }}</td>
+                        <td>{{ slot.start_time|time:"H:i" }}</td>
+                        <td>{{ slot.end_time|time:"H:i" }}</td>
+                        <td><a class="btn btn-sm btn-danger" href="{% url 'delete_availability_slot' slot.id %}">Delete</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-center">No availability slots added</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h5>Blocked Dates</h5>
+            <table class="table table-bordered">
+                <thead><tr><th>Date</th><th>Reason</th><th></th></tr></thead>
+                <tbody>
+                {% for blocked in blocked_dates %}
+                    <tr>
+                        <td>{{ blocked.date }}</td>
+                        <td>{{ blocked.reason|default:"-" }}</td>
+                        <td><a class="btn btn-sm btn-danger" href="{% url 'delete_blocked_date' blocked.id %}">Delete</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="3" class="text-center">No blocked dates</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
